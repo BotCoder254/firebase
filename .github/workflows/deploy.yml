@@ -27,6 +27,22 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Verify Firebase Config
+        run: |
+          if [ ! -f "js/firebase-config.js" ]; then
+            echo "Error: firebase-config.js not found"
+            exit 1
+          fi
+          echo "Firebase config file found"
+          
+      - name: Copy Firebase Config
+        run: |
+          mkdir -p js
+          cp js/firebase-config.js js/firebase-config.js.bak
+          cat js/firebase-config.js.bak > js/firebase-config.js
+          rm js/firebase-config.js.bak
+          echo "Firebase config copied successfully"
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 

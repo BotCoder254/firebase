@@ -1,5 +1,5 @@
 # Firebase config and sensitive files
-js/firebase-config.js
+# js/firebase-config.js is now tracked for GitHub Pages deployment
 .firebaserc
 firebase-debug.log
 .firebase/

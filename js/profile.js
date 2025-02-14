@@ -628,29 +628,73 @@ function createBlogCard(id, blog, isDraft = false) {
     const date = formatDate(blog.createdAt);
     const truncatedContent = blog.content.replace(/<[^>]*>/g, '').slice(0, 150) + (blog.content.length > 150 ? '...' : '');
     
-    div.innerHTML = `
-        <div class="card-body p-6">
-            <div class="flex items-center justify-between gap-4">
-                <h3 class="card-title text-lg flex-1 line-clamp-1">${blog.title}</h3>
-                ${isDraft ? '<div class="badge badge-warning shrink-0">Draft</div>' : ''}
-            </div>
-            <p class="line-clamp-2 text-sm text-gray-600 mt-2">${truncatedContent}</p>
-            <div class="flex flex-wrap gap-2 mt-3">
-                ${blog.tags?.map(tag => `<span class="badge badge-outline badge-sm">${tag}</span>`).join('') || ''}
-            </div>
-            <div class="flex justify-between items-center mt-4 pt-3 border-t border-base-200">
-                <span class="text-sm text-gray-500">${date}</span>
-                <div class="flex gap-2">
-                    <a href="edit-blog.html?id=${id}" class="btn btn-outline btn-sm">
-                        <i class="fas fa-edit mr-2"></i>Edit
-                    </a>
-                    <a href="blog.html?id=${id}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-eye mr-2"></i>View
-                    </a>
+    // Get author data
+    db.collection('users').doc(blog.authorId).get().then(authorDoc => {
+        const authorData = authorDoc.exists ? authorDoc.data() : { name: 'Anonymous', photoURL: null };
+        
+        div.innerHTML = `
+            <div class="card-body p-6">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="avatar placeholder">
+                            <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                ${authorData.photoURL ? 
+                                    `<img src="${authorData.photoURL}" alt="${authorData.name}" class="w-full h-full object-cover" />` :
+                                    `<span class="text-xs">${getInitials(authorData.name)}</span>`
+                                }
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="card-title text-lg flex-1 line-clamp-1">${blog.title}</h3>
+                            <p class="text-sm text-gray-500">${authorData.name}</p>
+                        </div>
+                        ${isDraft ? '<div class="badge badge-warning shrink-0">Draft</div>' : ''}
+                    </div>
+                </div>
+                <p class="line-clamp-2 text-sm text-gray-600 mt-2">${truncatedContent}</p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    ${blog.tags?.map(tag => `<span class="badge badge-outline badge-sm">${tag}</span>`).join('') || ''}
+                </div>
+                <div class="flex justify-between items-center mt-4 pt-3 border-t border-base-200">
+                    <span class="text-sm text-gray-500">${date}</span>
+                    <div class="flex gap-2">
+                        <a href="edit-blog.html?id=${id}" class="btn btn-outline btn-sm">
+                            <i class="fas fa-edit mr-2"></i>Edit
+                        </a>
+                        <a href="blog.html?id=${id}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye mr-2"></i>View
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
+    }).catch(error => {
+        console.error('Error loading author data:', error);
+        // Fallback rendering without author data
+        div.innerHTML = `
+            <div class="card-body p-6">
+                <div class="flex items-center justify-between gap-4">
+                    <h3 class="card-title text-lg flex-1 line-clamp-1">${blog.title}</h3>
+                    ${isDraft ? '<div class="badge badge-warning shrink-0">Draft</div>' : ''}
+                </div>
+                <p class="line-clamp-2 text-sm text-gray-600 mt-2">${truncatedContent}</p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    ${blog.tags?.map(tag => `<span class="badge badge-outline badge-sm">${tag}</span>`).join('') || ''}
+                </div>
+                <div class="flex justify-between items-center mt-4 pt-3 border-t border-base-200">
+                    <span class="text-sm text-gray-500">${date}</span>
+                    <div class="flex gap-2">
+                        <a href="edit-blog.html?id=${id}" class="btn btn-outline btn-sm">
+                            <i class="fas fa-edit mr-2"></i>Edit
+                        </a>
+                        <a href="blog.html?id=${id}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye mr-2"></i>View
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
     
     return div;
 }
@@ -784,32 +828,72 @@ function loadSettings() {
     });
 }
 
-// Create comment card
+// Create comment card with user profile
 function createCommentCard(comment) {
     const div = document.createElement('div');
     div.className = 'card bg-base-100 shadow-xl';
     
     const date = formatDate(comment.createdAt);
     
-    div.innerHTML = `
-        <div class="card-body">
-            <div class="flex items-center justify-between mb-2">
-                <a href="blog.html?id=${comment.blogId}" class="link link-hover font-medium">
-                    ${comment.blogTitle}
-                </a>
-                <span class="text-sm text-gray-500">${date}</span>
+    // Get comment author data
+    db.collection('users').doc(comment.userId).get().then(userDoc => {
+        const userData = userDoc.exists ? userDoc.data() : { name: 'Anonymous', photoURL: null };
+        
+        div.innerHTML = `
+            <div class="card-body">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="avatar placeholder">
+                            <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                ${userData.photoURL ? 
+                                    `<img src="${userData.photoURL}" alt="${userData.name}" class="w-full h-full object-cover" />` :
+                                    `<span class="text-xs">${getInitials(userData.name)}</span>`
+                                }
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-medium">${userData.name}</p>
+                            <a href="blog.html?id=${comment.blogId}" class="link link-hover text-sm text-gray-500">
+                                ${comment.blogTitle}
+                            </a>
+                        </div>
+                    </div>
+                    <span class="text-sm text-gray-500">${date}</span>
+                </div>
+                <p class="text-gray-700">${comment.content}</p>
+                <div class="card-actions justify-end mt-4">
+                    <button class="btn btn-ghost btn-sm" onclick="editComment('${comment.id}', '${comment.blogId}')">
+                        <i class="fas fa-edit mr-2"></i>Edit
+                    </button>
+                    <button class="btn btn-ghost btn-sm text-error" onclick="deleteComment('${comment.id}', '${comment.blogId}')">
+                        <i class="fas fa-trash mr-2"></i>Delete
+                    </button>
+                </div>
             </div>
-            <p class="text-gray-700">${comment.content}</p>
-            <div class="card-actions justify-end mt-4">
-                <button class="btn btn-ghost btn-sm" onclick="editComment('${comment.id}', '${comment.blogId}')">
-                    <i class="fas fa-edit mr-2"></i>Edit
-                </button>
-                <button class="btn btn-ghost btn-sm text-error" onclick="deleteComment('${comment.id}', '${comment.blogId}')">
-                    <i class="fas fa-trash mr-2"></i>Delete
-                </button>
+        `;
+    }).catch(error => {
+        console.error('Error loading comment author data:', error);
+        // Fallback rendering without author data
+        div.innerHTML = `
+            <div class="card-body">
+                <div class="flex items-center justify-between mb-2">
+                    <a href="blog.html?id=${comment.blogId}" class="link link-hover font-medium">
+                        ${comment.blogTitle}
+                    </a>
+                    <span class="text-sm text-gray-500">${date}</span>
+                </div>
+                <p class="text-gray-700">${comment.content}</p>
+                <div class="card-actions justify-end mt-4">
+                    <button class="btn btn-ghost btn-sm" onclick="editComment('${comment.id}', '${comment.blogId}')">
+                        <i class="fas fa-edit mr-2"></i>Edit
+                    </button>
+                    <button class="btn btn-ghost btn-sm text-error" onclick="deleteComment('${comment.id}', '${comment.blogId}')">
+                        <i class="fas fa-trash mr-2"></i>Delete
+                    </button>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    });
     
     return div;
 }

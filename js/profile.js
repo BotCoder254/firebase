@@ -243,7 +243,7 @@ function updateProfileUI(userData, isOwnProfile) {
     if (userData.photoURL) {
         const img = new Image();
         img.onload = () => {
-            profileImage.innerHTML = `<img src="${userData.photoURL}" alt="Profile" class="w-full h-full object-cover rounded-full" />`;
+        profileImage.innerHTML = `<img src="${userData.photoURL}" alt="Profile" class="w-full h-full object-cover rounded-full" />`;
         };
         img.onerror = () => {
             profileImage.innerHTML = `<span class="text-3xl">${getInitials(userData.name || 'Anonymous')}</span>`;
@@ -838,9 +838,9 @@ function createCommentCard(comment) {
     // Get comment author data
     db.collection('users').doc(comment.userId).get().then(userDoc => {
         const userData = userDoc.exists ? userDoc.data() : { name: 'Anonymous', photoURL: null };
-        
-        div.innerHTML = `
-            <div class="card-body">
+    
+    div.innerHTML = `
+        <div class="card-body">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-3">
                         <div class="avatar placeholder">
@@ -849,14 +849,14 @@ function createCommentCard(comment) {
                                     `<img src="${userData.photoURL}" alt="${userData.name}" class="w-full h-full object-cover" />` :
                                     `<span class="text-xs">${getInitials(userData.name)}</span>`
                                 }
-                            </div>
-                        </div>
+            </div>
+            </div>
                         <div>
                             <p class="font-medium">${userData.name}</p>
                             <a href="blog.html?id=${comment.blogId}" class="link link-hover text-sm text-gray-500">
                                 ${comment.blogTitle}
-                            </a>
-                        </div>
+                    </a>
+                </div>
                     </div>
                     <span class="text-sm text-gray-500">${date}</span>
                 </div>
@@ -868,31 +868,31 @@ function createCommentCard(comment) {
                     <button class="btn btn-ghost btn-sm text-error" onclick="deleteComment('${comment.id}', '${comment.blogId}')">
                         <i class="fas fa-trash mr-2"></i>Delete
                     </button>
-                </div>
             </div>
-        `;
+        </div>
+    `;
     }).catch(error => {
         console.error('Error loading comment author data:', error);
         // Fallback rendering without author data
-        div.innerHTML = `
-            <div class="card-body">
-                <div class="flex items-center justify-between mb-2">
-                    <a href="blog.html?id=${comment.blogId}" class="link link-hover font-medium">
-                        ${comment.blogTitle}
-                    </a>
-                    <span class="text-sm text-gray-500">${date}</span>
-                </div>
-                <p class="text-gray-700">${comment.content}</p>
-                <div class="card-actions justify-end mt-4">
-                    <button class="btn btn-ghost btn-sm" onclick="editComment('${comment.id}', '${comment.blogId}')">
-                        <i class="fas fa-edit mr-2"></i>Edit
-                    </button>
-                    <button class="btn btn-ghost btn-sm text-error" onclick="deleteComment('${comment.id}', '${comment.blogId}')">
-                        <i class="fas fa-trash mr-2"></i>Delete
-                    </button>
-                </div>
+    div.innerHTML = `
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-2">
+                <a href="blog.html?id=${comment.blogId}" class="link link-hover font-medium">
+                    ${comment.blogTitle}
+                </a>
+                <span class="text-sm text-gray-500">${date}</span>
             </div>
-        `;
+            <p class="text-gray-700">${comment.content}</p>
+            <div class="card-actions justify-end mt-4">
+                <button class="btn btn-ghost btn-sm" onclick="editComment('${comment.id}', '${comment.blogId}')">
+                    <i class="fas fa-edit mr-2"></i>Edit
+                </button>
+                <button class="btn btn-ghost btn-sm text-error" onclick="deleteComment('${comment.id}', '${comment.blogId}')">
+                    <i class="fas fa-trash mr-2"></i>Delete
+                </button>
+            </div>
+        </div>
+    `;
     });
     
     return div;

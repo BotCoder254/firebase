@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Post - BlogHub</title>
+    <!-- DaisyUI and Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="navbar-start">
+            <div class="dropdown">
+                <label tabindex="0" class="btn btn-ghost lg:hidden">
+                    <i class="fas fa-bars"></i>
+                </label>
+                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="index.html"><i class="fas fa-home"></i> Home</a></li>
+                    <li id="mobileCreateBlog" class="hidden"><a href="create-blog.html"><i class="fas fa-pen"></i> Create Blog</a></li>
+                    <li id="mobileAuth"><a href="auth.html"><i class="fas fa-user"></i> Login/Sign Up</a></li>
+                </ul>
+            </div>
+            <a href="index.html" class="btn btn-ghost normal-case text-xl">BlogHub</a>
+        </div>
+        <div class="navbar-end hidden lg:flex">
+            <ul class="menu menu-horizontal px-1">
+                <li><a href="index.html"><i class="fas fa-home mr-2"></i> Home</a></li>
+                <li id="desktopCreateBlog" class="hidden"><a href="create-blog.html"><i class="fas fa-pen mr-2"></i> Create Blog</a></li>
+                <li id="desktopAuth"><a href="auth.html"><i class="fas fa-user mr-2"></i> Login/Sign Up</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Blog Content -->
+    <div class="container mx-auto p-4 max-w-4xl">
+        <!-- Loading State -->
+        <div id="loadingState" class="flex flex-col items-center justify-center py-12">
+            <div class="loading loading-spinner loading-lg"></div>
+            <p class="mt-4 text-gray-500">Loading blog post...</p>
+        </div>
+
+        <!-- Blog Post -->
+        <article id="blogPost" class="hidden">
+            <!-- Cover Image -->
+            <div class="relative w-full h-[400px] mb-8">
+                <img id="coverImage" src="" alt="" class="w-full h-full object-cover rounded-lg" />
+                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70 to-transparent text-white rounded-b-lg">
+                    <h1 id="blogTitle" class="text-4xl font-bold mb-4"></h1>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-user"></i>
+                            <span id="authorName"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-calendar"></i>
+                            <span id="publishDate"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-folder"></i>
+                            <span id="category" class="badge badge-primary"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div id="blogContent" class="prose lg:prose-xl max-w-none mb-8"></div>
+
+            <!-- Tags -->
+            <div class="flex flex-wrap gap-2 mb-8">
+                <i class="fas fa-tags mt-1"></i>
+                <div id="tagsList"></div>
+            </div>
+
+            <!-- Author Info -->
+            <div class="card bg-base-200 p-6 mb-8">
+                <div class="flex items-center gap-4">
+                    <div class="avatar placeholder">
+                        <div class="bg-neutral-focus text-neutral-content rounded-full w-16">
+                            <span id="authorInitials" class="text-xl"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 id="authorNameBio" class="text-xl font-bold"></h3>
+                        <p class="text-gray-500">Author</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="card bg-base-100 shadow-xl mb-8">
+                <div class="card-body">
+                    <div class="flex items-center gap-2 text-xl font-medium mb-4">
+                        <i class="fas fa-comments"></i>
+                        <span>Comments</span>
+                        <span class="badge badge-primary" id="commentCount">0</span>
+                    </div>
+                    <!-- Add Comment -->
+                    <div id="addCommentSection" class="mb-8">
+                        <div id="commentLoginPrompt" class="text-center py-6 hidden">
+                            <p class="mb-4">Please log in to leave a comment</p>
+                            <a href="auth.html" class="btn btn-primary">
+                                <i class="fas fa-sign-in-alt mr-2"></i>
+                                Login
+                            </a>
+                        </div>
+                        <form id="commentForm" class="space-y-4 hidden">
+                            <div class="form-control">
+                                <textarea id="commentContent" class="textarea textarea-bordered h-24" 
+                                    placeholder="Write your comment here..."></textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane mr-2"></i>
+                                    Post Comment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Comments List -->
+                    <div id="commentsList" class="space-y-6">
+                        <!-- Comments will be dynamically added here -->
+                    </div>
+
+                    <!-- Load More Comments -->
+                    <div class="text-center mt-6">
+                        <button id="loadMoreComments" class="btn btn-outline btn-sm hidden">
+                            Load More Comments
+                            <i class="fas fa-chevron-down ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Modal -->
+            <dialog id="loadingModal" class="modal">
+                <div class="modal-box text-center">
+                    <div class="loading loading-spinner loading-lg mb-4"></div>
+                    <p id="loadingMessage">Processing your request...</p>
+                </div>
+            </dialog>
+
+            <!-- Confirmation Modal -->
+            <dialog id="confirmationModal" class="modal">
+                <div class="modal-box">
+                    <h3 class="font-bold text-lg mb-4" id="confirmationTitle">Confirm Action</h3>
+                    <p id="confirmationMessage">Are you sure you want to proceed?</p>
+                    <div class="modal-action">
+                        <form method="dialog">
+                            <button class="btn btn-ghost mr-2">Cancel</button>
+                            <button id="confirmationButton" class="btn btn-primary">Confirm</button>
+                        </form>
+                    </div>
+                </div>
+            </dialog>
+
+            <!-- Actions -->
+            <div id="blogActions" class="flex justify-between items-center mb-8">
+                <div class="flex gap-2">
+                    <button id="likeBtn" class="btn btn-ghost gap-2">
+                        <i class="far fa-heart"></i>
+                        <span id="likeCount">0</span>
+                    </button>
+                    <button id="shareBtn" class="btn btn-ghost gap-2">
+                        <i class="fas fa-share"></i>
+                        Share
+                    </button>
+                </div>
+                <div id="authorActions" class="hidden">
+                    <a id="editBtn" href="#" class="btn btn-outline btn-primary mr-2">
+                        <i class="fas fa-edit mr-2"></i>
+                        Edit
+                    </a>
+                    <button id="deleteBtn" class="btn btn-outline btn-error">
+                        <i class="fas fa-trash mr-2"></i>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </article>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden text-center py-12">
+            <i class="fas fa-exclamation-circle text-4xl text-error mb-4"></i>
+            <h2 class="text-2xl font-bold mb-2">Error Loading Blog</h2>
+            <p id="errorMessage" class="text-gray-500"></p>
+            <a href="index.html" class="btn btn-primary mt-4">
+                <i class="fas fa-home mr-2"></i>
+                Return Home
+            </a>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <dialog id="shareModal" class="modal">
+        <form method="dialog" class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Share Blog Post</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <button class="btn btn-outline" onclick="shareSocial('twitter')">
+                    <i class="fab fa-twitter mr-2"></i>
+                    Twitter
+                </button>
+                <button class="btn btn-outline" onclick="shareSocial('facebook')">
+                    <i class="fab fa-facebook mr-2"></i>
+                    Facebook
+                </button>
+                <button class="btn btn-outline" onclick="shareSocial('linkedin')">
+                    <i class="fab fa-linkedin mr-2"></i>
+                    LinkedIn
+                </button>
+                <button class="btn btn-outline" onclick="copyLink()">
+                    <i class="fas fa-link mr-2"></i>
+                    Copy Link
+                </button>
+            </div>
+        </form>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- Delete Confirmation Modal -->
+    <dialog id="deleteModal" class="modal">
+        <form method="dialog" class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Delete Blog Post</h3>
+            <p>Are you sure you want to delete this blog post? This action cannot be undone.</p>
+            <div class="modal-action">
+                <button class="btn">Cancel</button>
+                <button id="confirmDelete" class="btn btn-error">Delete</button>
+            </div>
+        </form>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <!-- Custom JS -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/blog.js"></script>
+   <script src="blog.js"></script>
+</body>
+</html> 

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - BlogHub</title>
+    <!-- DaisyUI and Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-base-200 min-h-screen">
+    <!-- Navbar -->
+    <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+        <div class="navbar-start">
+            <div class="dropdown">
+                <label tabindex="0" class="btn btn-ghost lg:hidden">
+                    <i class="fas fa-bars"></i>
+                </label>
+                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="index.html"><i class="fas fa-home"></i> Home</a></li>
+                    <li id="mobileCreateBlog" class="hidden"><a href="create-blog.html"><i class="fas fa-pen"></i> Create Blog</a></li>
+                    <li id="mobileProfile" class="hidden"><a href="profile.html" class="active"><i class="fas fa-user"></i> Profile</a></li>
+                    <li id="mobileAuth"><a href="auth.html"><i class="fas fa-sign-in-alt"></i> Login/Sign Up</a></li>
+                </ul>
+            </div>
+            <a href="index.html" class="btn btn-ghost normal-case text-xl">
+                <i class="fas fa-book-open mr-2"></i> BlogHub
+            </a>
+        </div>
+        <div class="navbar-end hidden lg:flex">
+            <ul class="menu menu-horizontal px-1">
+                <li><a href="index.html"><i class="fas fa-home mr-2"></i> Home</a></li>
+                <li id="desktopCreateBlog" class="hidden"><a href="create-blog.html"><i class="fas fa-pen mr-2"></i> Create Blog</a></li>
+                <li id="desktopProfile" class="hidden"><a href="profile.html" class="active"><i class="fas fa-user mr-2"></i> Profile</a></li>
+                <li id="desktopAuth"><a href="auth.html"><i class="fas fa-sign-in-alt mr-2"></i> Login/Sign Up</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="container mx-auto p-4">
+        <!-- Loading State -->
+        <div id="loadingState" class="flex flex-col items-center justify-center py-12">
+            <div class="loading loading-spinner loading-lg"></div>
+            <p class="mt-4 text-gray-500">Loading profile...</p>
+        </div>
+
+        <!-- Profile Section -->
+        <div id="profileSection" class="hidden">
+            <div class="grid grid-cols-12 gap-6">
+                <!-- Left Column - Profile Card -->
+                <div class="col-span-12 lg:col-span-3">
+                    <div class="card bg-base-100 shadow-xl sticky top-20">
+                        <div class="card-body items-center text-center">
+                            <!-- Profile Image -->
+                            <div class="relative group">
+                                <div class="avatar placeholder">
+                                    <div id="profileImage" class="bg-neutral text-neutral-content rounded-full w-24">
+                                        <span class="text-2xl">JD</span>
+                                    </div>
+                                </div>
+                                <label for="imageUpload" class="absolute inset-0 flex items-center justify-center bg-black/50 text-white opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity">
+                                    <i class="fas fa-camera text-xl"></i>
+                                </label>
+                                <input type="file" id="imageUpload" accept="image/*" class="hidden" />
+                            </div>
+                            
+                            <h2 id="profileName" class="text-xl font-bold mt-4">John Doe</h2>
+                            <p id="profileEmail" class="text-gray-500 text-sm">john@example.com</p>
+                            
+                            <!-- Additional User Info -->
+                            <div class="mt-4 space-y-2 text-sm w-full">
+                                <p id="profileBio" class="text-center text-gray-600 italic"></p>
+                                <div id="profileLocation" class="flex items-center justify-center gap-2 text-gray-600">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span></span>
+                                </div>
+                                <div id="profileWebsite" class="flex items-center justify-center gap-2">
+                                    <i class="fas fa-globe"></i>
+                                    <a href="#" target="_blank" class="link link-primary"></a>
+                                </div>
+                                <div id="lastActive" class="flex items-center justify-center gap-2 text-gray-600">
+                                    <i class="fas fa-clock"></i>
+                                    <span></span>
+                                </div>
+                            </div>
+                            
+                            <!-- Stats -->
+                            <div class="stats stats-vertical shadow mt-4 w-full bg-base-200">
+                                <div class="stat place-items-center p-2">
+                                    <div class="stat-figure text-primary">
+                                        <i class="fas fa-pen-fancy text-xl"></i>
+                                    </div>
+                                    <div class="stat-title text-sm">Blogs</div>
+                                    <div id="blogCount" class="stat-value text-2xl">0</div>
+                                    <div id="blogTrend" class="stat-desc text-xs">Published posts</div>
+                                </div>
+                                
+                                <div class="stat place-items-center p-2">
+                                    <div class="stat-figure text-secondary">
+                                        <i class="fas fa-comments text-xl"></i>
+                                    </div>
+                                    <div class="stat-title text-sm">Comments</div>
+                                    <div id="commentCount" class="stat-value text-2xl">0</div>
+                                    <div id="commentTrend" class="stat-desc text-xs">Total interactions</div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="space-y-2 mt-4 w-full">
+                                <button id="editProfileBtn" class="btn btn-primary btn-sm btn-block">
+                                    <i class="fas fa-edit mr-2"></i>
+                                    Edit Profile
+                                </button>
+                                <button id="shareProfileBtn" class="btn btn-outline btn-sm btn-block">
+                                    <i class="fas fa-share-alt mr-2"></i>
+                                    Share Profile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Column - Blog Posts -->
+                <div class="col-span-12 lg:col-span-6">
+                    <div class="tabs tabs-boxed mb-6 justify-center">
+                        <a class="tab tab-active" data-tab="blogs">My Blogs</a>
+                        <a class="tab" data-tab="drafts">Drafts</a>
+                        <a class="tab" data-tab="comments">Comments</a>
+                    </div>
+
+                    <!-- Tabs Content -->
+                    <div id="tabsContent">
+                        <div id="blogsTab" class="space-y-4">
+                            <!-- Blog cards will be dynamically added here -->
+                        </div>
+
+                        <div id="draftsTab" class="hidden space-y-4">
+                            <!-- Draft cards will be dynamically added here -->
+                        </div>
+
+                        <div id="commentsTab" class="hidden space-y-4">
+                            <!-- Comments will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Settings -->
+                <div class="col-span-12 lg:col-span-3">
+                    <div class="card bg-base-100 shadow-xl sticky top-20">
+                        <div class="card-body">
+                            <h3 class="text-lg font-bold mb-4">Account Settings</h3>
+                            
+                            <div class="form-control">
+                                <label class="label cursor-pointer">
+                                    <span class="label-text">Email Notifications</span>
+                                    <input type="checkbox" id="emailNotifications" class="toggle toggle-primary toggle-sm" />
+                                </label>
+                            </div>
+
+                            <div class="form-control mt-4">
+                                <label class="label">
+                                    <span class="label-text">Theme</span>
+                                </label>
+                                <select id="themeSelect" class="select select-bordered select-sm">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                    <option value="system">System</option>
+                                </select>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <h3 class="text-lg font-bold mb-4">Security</h3>
+                            <button id="changePasswordBtn" class="btn btn-outline btn-sm btn-block">
+                                <i class="fas fa-key mr-2"></i>
+                                Change Password
+                            </button>
+
+                            <div class="divider"></div>
+
+                            <h3 class="text-lg font-bold text-error mb-4">Danger Zone</h3>
+                            <button id="deleteAccountBtn" class="btn btn-error btn-outline btn-sm btn-block">
+                                <i class="fas fa-trash mr-2"></i>
+                                Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden text-center py-12">
+            <i class="fas fa-exclamation-circle text-4xl text-error mb-4"></i>
+            <h2 class="text-2xl font-bold mb-2">Error Loading Profile</h2>
+            <p id="errorMessage" class="text-gray-500 mb-4"></p>
+            <a href="index.html" class="btn btn-primary">
+                <i class="fas fa-home mr-2"></i>
+                Return Home
+            </a>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <dialog id="editProfileModal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Edit Profile</h3>
+            <form id="editProfileForm" class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Display Name</span>
+                    </label>
+                    <input type="text" id="editName" class="input input-bordered" required />
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Bio</span>
+                        <span class="label-text-alt">Max 160 characters</span>
+                    </label>
+                    <textarea id="editBio" class="textarea textarea-bordered" rows="3" maxlength="160"></textarea>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Website</span>
+                        <span class="label-text-alt">Optional</span>
+                    </label>
+                    <input type="url" id="editWebsite" class="input input-bordered" placeholder="https://example.com" />
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Location</span>
+                        <span class="label-text-alt">Optional</span>
+                    </label>
+                    <input type="text" id="editLocation" class="input input-bordered" placeholder="City, Country" />
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Show email on profile</span>
+                        <input type="checkbox" id="editShowEmail" class="toggle toggle-primary" />
+                    </label>
+                </div>
+                <div class="modal-action">
+                    <button type="button" class="btn" onclick="editProfileModal.close()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- Change Password Modal -->
+    <dialog id="changePasswordModal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Change Password</h3>
+            <form id="changePasswordForm" class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Current Password</span>
+                    </label>
+                    <input type="password" id="currentPassword" class="input input-bordered" required />
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">New Password</span>
+                    </label>
+                    <input type="password" id="newPassword" class="input input-bordered" required />
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Confirm New Password</span>
+                    </label>
+                    <input type="password" id="confirmPassword" class="input input-bordered" required />
+                </div>
+                <div class="modal-action">
+                    <button type="button" class="btn" onclick="changePasswordModal.close()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- Delete Account Modal -->
+    <dialog id="deleteAccountModal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg mb-4">Delete Account</h3>
+            <p class="mb-4">Are you sure you want to delete your account? This action cannot be undone.</p>
+            <form id="deleteAccountForm" class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Enter your password to confirm</span>
+                    </label>
+                    <input type="password" id="deleteAccountPassword" class="input input-bordered" required />
+                </div>
+                <div class="modal-action">
+                    <button type="button" class="btn" onclick="deleteAccountModal.close()">Cancel</button>
+                    <button type="submit" class="btn btn-error">Delete Account</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- Loading Modal -->
+    <dialog id="loadingModal" class="modal">
+        <div class="modal-box text-center">
+            <div class="loading loading-spinner loading-lg mb-4"></div>
+            <p id="loadingMessage">Processing your request...</p>
+        </div>
+    </dialog>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <!-- Custom JS -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+</html> 

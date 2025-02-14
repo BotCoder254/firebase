@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlogHub - Share Your Stories</title>
+    <!-- DaisyUI and Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Hero Section with Navbar -->
+    <div class="hero min-h-screen bg-base-200 relative">
+        <!-- Background Image with Gradient Overlay -->
+        <div class="absolute inset-0">
+            <img src="https://source.unsplash.com/random/1920x1080/?technology,workspace" alt="Background" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/90 to-secondary/90"></div>
+        </div>
+        <div class="hero-content flex-col lg:flex-row-reverse gap-8 max-w-7xl mx-auto px-4 relative">
+            <div class="flex-1">
+                <img src="https://source.unsplash.com/random/600x400/?coding,programming" alt="Hero image" class="rounded-lg shadow-2xl w-full max-w-lg mx-auto" />
+            </div>
+            <div class="flex-1 text-left text-neutral-content">
+                <h1 class="text-5xl font-bold mb-8 leading-tight">Share Your Stories, Ideas & Expertise</h1>
+                <p class="text-lg mb-8 opacity-90 max-w-md">Join our community of writers and readers. Create beautiful blogs, engage with readers, and grow your audience.</p>
+                <div class="flex flex-wrap gap-4" id="heroButtons">
+                    <!-- Buttons will be dynamically updated based on auth status -->
+                </div>
+                <div class="mt-12 grid grid-cols-3 gap-6 text-center">
+                    <div>
+                        <div class="stat-value text-3xl">1,200+</div>
+                        <div class="stat-title text-sm opacity-80">Active Writers</div>
+                    </div>
+                    <div>
+                        <div class="stat-value text-3xl">5,000+</div>
+                        <div class="stat-title text-sm opacity-80">Published Blogs</div>
+                    </div>
+                    <div>
+                        <div class="stat-value text-3xl">50K+</div>
+                        <div class="stat-title text-sm opacity-80">Monthly Readers</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Centered Down Arrow -->
+        <div class="absolute bottom-8 left-0 right-0 flex justify-center">
+            <div class="animate-bounce text-white/90">
+                <i class="fas fa-chevron-down text-3xl"></i>
+            </div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0">
+            <svg class="w-full h-16 text-base-100" preserveAspectRatio="none" viewBox="0 0 1440 54">
+                <path fill="currentColor" d="M0 22L120 16.7C240 11 480 1.00001 720 0.700012C960 0.400012 1200 10 1320 15.3L1440 20V54H1320C1200 54 960 54 720 54C480 54 240 54 120 54H0V22Z"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+        <div class="navbar-start">
+            <div class="dropdown">
+                <label tabindex="0" class="btn btn-ghost lg:hidden">
+                    <i class="fas fa-bars"></i>
+                </label>
+                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="index.html" class="active"><i class="fas fa-home"></i> Home</a></li>
+                    <li id="mobileCreateBlog" class="hidden"><a href="create-blog.html"><i class="fas fa-pen"></i> Create Blog</a></li>
+                    <li id="mobileProfile" class="hidden"><a href="profile.html"><i class="fas fa-user"></i> Profile</a></li>
+                    <li id="mobileAuth"><a href="auth.html"><i class="fas fa-sign-in-alt"></i> Login/Sign Up</a></li>
+                </ul>
+            </div>
+            <a href="index.html" class="btn btn-ghost normal-case text-xl">
+                <i class="fas fa-book-open mr-2"></i> BlogHub
+            </a>
+        </div>
+        <div class="navbar-end hidden lg:flex">
+            <ul class="menu menu-horizontal px-1">
+                <li><a href="index.html" class="active"><i class="fas fa-home mr-2"></i> Home</a></li>
+                <li id="desktopCreateBlog" class="hidden"><a href="create-blog.html"><i class="fas fa-pen mr-2"></i> Create Blog</a></li>
+                <li id="desktopProfile" class="hidden"><a href="profile.html"><i class="fas fa-user mr-2"></i> Profile</a></li>
+                <li id="desktopAuth"><a href="auth.html"><i class="fas fa-sign-in-alt mr-2"></i> Login/Sign Up</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="container mx-auto p-8" id="blogs">
+        <div class="flex flex-col md:flex-row gap-4 mb-8">
+            <div class="form-control flex-1">
+                <div class="input-group">
+                    <input type="text" id="searchInput" placeholder="Search blogs..." class="input input-bordered w-full" />
+                    <button class="btn btn-square btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <select class="select select-bordered w-full md:w-auto" id="categoryFilter">
+                <option value="">All Categories</option>
+                <option value="tech">Technology</option>
+                <option value="lifestyle">Lifestyle</option>
+                <option value="education">Education</option>
+                <option value="travel">Travel</option>
+                <option value="food">Food & Cooking</option>
+            </select>
+        </div>
+
+        <!-- Featured Section -->
+        <div class="mb-12">
+            <h2 class="text-3xl font-bold mb-6">Featured Posts</h2>
+            <div class="carousel w-full rounded-box">
+                <div id="featuredBlogs" class="carousel-item w-full">
+                    <!-- Featured blog cards will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Blog List Section -->
+        <h2 class="text-3xl font-bold mb-6">Latest Posts</h2>
+        <div id="blogList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Blog cards will be dynamically inserted here -->
+            <div class="card bg-base-100 shadow-xl h-full">
+                <figure class="relative overflow-hidden" style="padding-top: 60%">
+                    <img src="https://source.unsplash.com/random/800x600/?blog,writing" alt="Blog placeholder" class="absolute top-0 left-0 w-full h-full object-cover" loading="lazy" />
+                </figure>
+                <div class="card-body">
+                    <div class="loading loading-spinner loading-lg"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load More -->
+        <div class="text-center mt-8">
+            <button id="loadMoreBtn" class="btn btn-outline">
+                Load More
+                <i class="fas fa-chevron-down ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Newsletter Section -->
+    <div class="bg-base-200 py-16 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="max-w-xl mx-auto text-center">
+                <h2 class="text-3xl font-bold mb-4">Subscribe to Our Newsletter</h2>
+                <p class="mb-6">Get the latest blog posts and updates delivered directly to your inbox.</p>
+                <div class="join">
+                    <input type="email" placeholder="Enter your email" class="input input-bordered join-item" />
+                    <button class="btn btn-primary join-item">Subscribe</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer p-10 bg-neutral text-neutral-content">
+        <div>
+            <span class="footer-title">About BlogHub</span>
+            <p class="max-w-md">BlogHub is your platform for sharing thoughts, ideas, and stories with the world. Join our community of writers and readers today!</p>
+        </div>
+        <div>
+            <span class="footer-title">Navigation</span>
+            <a class="link link-hover" href="index.html">Home</a>
+            <a class="link link-hover" href="auth.html">Login/Sign Up</a>
+            <a class="link link-hover" id="footerCreateBlog" class="hidden" href="create-blog.html">Create Blog</a>
+            <a class="link link-hover" href="#blogs">Latest Posts</a>
+        </div>
+        <div>
+            <span class="footer-title">Connect</span>
+            <div class="grid grid-flow-col gap-4">
+                <a href="#" class="btn btn-ghost btn-square">
+                    <i class="fab fa-twitter text-xl"></i>
+                </a>
+                <a href="#" class="btn btn-ghost btn-square">
+                    <i class="fab fa-facebook text-xl"></i>
+                </a>
+                <a href="#" class="btn btn-ghost btn-square">
+                    <i class="fab fa-instagram text-xl"></i>
+                </a>
+                <a href="#" class="btn btn-ghost btn-square">
+                    <i class="fab fa-github text-xl"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <!-- Custom JS -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 

@@ -161,15 +161,15 @@ auth.onAuthStateChanged(async (user) => {
 
         // If on profile page and not viewing another user's profile, redirect to auth
         if (!userId && window.location.pathname.includes('profile.html')) {
-            window.location.href = 'auth.html';
-            return;
+        window.location.href = 'auth.html';
+        return;
         }
     }
 
     // Initialize theme and load profile
     initializeTheme();
     if (user || userId) {
-        await loadProfile();
+    await loadProfile();
     }
 });
 
@@ -177,18 +177,42 @@ auth.onAuthStateChanged(async (user) => {
 async function loadProfile() {
     try {
         const currentUser = auth.currentUser;
-        const targetUserId = userId || currentUser.uid;
+        const targetUserId = userId || currentUser?.uid;
 
-        const userDoc = await db.collection('users').doc(targetUserId).get();
-        if (!userDoc.exists) {
-            throw new Error('Profile not found');
+        if (!targetUserId) {
+            throw new Error('No user ID available');
         }
 
+        // Get user data from Firestore
+        const userDoc = await db.collection('users').doc(targetUserId).get();
+        
+        if (!userDoc.exists) {
+            // If user document doesn't exist but we have auth user, create it
+            if (currentUser && targetUserId === currentUser.uid) {
+                await db.collection('users').doc(targetUserId).set({
+                    name: currentUser.displayName || 'User',
+                    email: currentUser.email,
+                    photoURL: currentUser.photoURL,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                // Fetch the newly created document
+                const newUserDoc = await db.collection('users').doc(targetUserId).get();
+                if (newUserDoc.exists) {
+                    const userData = newUserDoc.data();
+                    const isOwnProfile = currentUser && targetUserId === currentUser.uid;
+                    updateProfileUI(userData, isOwnProfile);
+                } else {
+                    throw new Error('Failed to create user profile');
+                }
+            } else {
+            throw new Error('Profile not found');
+        }
+        } else {
         const userData = userDoc.data();
         const isOwnProfile = currentUser && targetUserId === currentUser.uid;
-
-        // Update profile UI
         updateProfileUI(userData, isOwnProfile);
+        }
 
         // Set up real-time listeners
         setupRealTimeListeners(targetUserId);
@@ -209,65 +233,65 @@ async function loadProfile() {
 
 // Update profile UI
 function updateProfileUI(userData, isOwnProfile) {
-    // Update profile image
-    if (userData.photoURL) {
-        profileImage.innerHTML = `<img src="${userData.photoURL}" alt="Profile" class="w-full h-full object-cover rounded-full" />`;
-    } else {
-        profileImage.innerHTML = `<span class="text-3xl">${getInitials(userData.name || 'Anonymous')}</span>`;
-    }
-
-    // Update profile info
-    profileName.textContent = userData.name || 'Anonymous';
-    profileEmail.textContent = isOwnProfile ? userData.email : '';
-
-    // Update additional info
+    // Cache DOM elements
     const profileBio = document.getElementById('profileBio');
     const profileLocation = document.getElementById('profileLocation').querySelector('span');
     const profileWebsite = document.getElementById('profileWebsite').querySelector('a');
     const lastActive = document.getElementById('lastActive').querySelector('span');
 
-    // Bio
-    if (userData.bio) {
+    // Update profile image with loading state
+    if (userData.photoURL) {
+        const img = new Image();
+        img.onload = () => {
+            profileImage.innerHTML = `<img src="${userData.photoURL}" alt="Profile" class="w-full h-full object-cover rounded-full" />`;
+        };
+        img.onerror = () => {
+            profileImage.innerHTML = `<span class="text-3xl">${getInitials(userData.name || 'Anonymous')}</span>`;
+        };
+        img.src = userData.photoURL;
+    } else {
+        profileImage.innerHTML = `<span class="text-3xl">${getInitials(userData.name || 'Anonymous')}</span>`;
+    }
+
+    // Update profile info with fallbacks
+    profileName.textContent = userData.name || (isOwnProfile ? auth.currentUser?.displayName : 'Anonymous');
+    profileEmail.textContent = isOwnProfile ? (userData.email || auth.currentUser?.email) : '';
+
+    // Update additional info with optimized checks
+    if (userData.bio?.trim()) {
         profileBio.textContent = userData.bio;
         profileBio.parentElement.classList.remove('hidden');
     } else {
         profileBio.parentElement.classList.add('hidden');
     }
 
-    // Location
-    if (userData.location) {
+    if (userData.location?.trim()) {
         profileLocation.textContent = userData.location;
         profileLocation.parentElement.classList.remove('hidden');
     } else {
         profileLocation.parentElement.classList.add('hidden');
     }
 
-    // Website
-    if (userData.website) {
-        profileWebsite.href = userData.website.startsWith('http') ? userData.website : `https://${userData.website}`;
+    if (userData.website?.trim()) {
+        const websiteUrl = userData.website.startsWith('http') ? userData.website : `https://${userData.website}`;
+        profileWebsite.href = websiteUrl;
         profileWebsite.textContent = userData.website.replace(/^https?:\/\//, '');
         profileWebsite.parentElement.classList.remove('hidden');
     } else {
         profileWebsite.parentElement.classList.add('hidden');
     }
 
-    // Last active
+    // Optimize last active calculation
     if (userData.lastActive) {
         const lastActiveDate = userData.lastActive.toDate();
         const now = new Date();
         const diffMinutes = Math.floor((now - lastActiveDate) / (1000 * 60));
         
-        let lastActiveText = '';
-        if (diffMinutes < 1) {
-            lastActiveText = 'Just now';
-        } else if (diffMinutes < 60) {
-            lastActiveText = `${diffMinutes}m ago`;
-        } else if (diffMinutes < 1440) {
-            const hours = Math.floor(diffMinutes / 60);
-            lastActiveText = `${hours}h ago`;
-        } else {
-            lastActiveText = formatDate(userData.lastActive);
-        }
+        let lastActiveText = isOwnProfile ? 'Online' : 
+            diffMinutes < 1 ? 'Just now' :
+            diffMinutes < 60 ? `${diffMinutes}m ago` :
+            diffMinutes < 1440 ? `${Math.floor(diffMinutes / 60)}h ago` :
+            formatDate(userData.lastActive);
         
         lastActive.textContent = isOwnProfile ? 'Online' : `Last seen ${lastActiveText}`;
         lastActive.parentElement.classList.remove('hidden');
@@ -275,27 +299,25 @@ function updateProfileUI(userData, isOwnProfile) {
         lastActive.parentElement.classList.add('hidden');
     }
 
-    // Show/hide edit buttons and settings for own profile only
-    if (editProfileBtn) editProfileBtn.style.display = isOwnProfile ? 'block' : 'none';
-    if (document.querySelector('[data-tab="settings"]')) {
-        document.querySelector('[data-tab="settings"]').style.display = isOwnProfile ? 'block' : 'none';
-    }
-    if (document.getElementById('settingsTab')) {
-        document.getElementById('settingsTab').style.display = isOwnProfile ? 'block' : 'none';
-    }
+    // Update visibility of edit buttons and settings
+    const isVisible = isOwnProfile ? 'block' : 'none';
+    if (editProfileBtn) editProfileBtn.style.display = isVisible;
+    const settingsTab = document.querySelector('[data-tab="settings"]');
+    if (settingsTab) settingsTab.style.display = isVisible;
+    const settingsTabContent = document.getElementById('settingsTab');
+    if (settingsTabContent) settingsTabContent.style.display = isVisible;
 
-    // Update stats trends
-    const blogTrend = document.getElementById('blogTrend');
-    const commentTrend = document.getElementById('commentTrend');
-    
+    // Update stats trends with optimized calculations
     if (userData.stats) {
-        if (userData.stats.blogsLastMonth !== undefined && userData.stats.blogsThisMonth !== undefined) {
-            const blogDiff = userData.stats.blogsThisMonth - userData.stats.blogsLastMonth;
+        const { blogsLastMonth, blogsThisMonth, commentsLastMonth, commentsThisMonth } = userData.stats;
+        
+        if (typeof blogsLastMonth !== 'undefined' && typeof blogsThisMonth !== 'undefined') {
+            const blogDiff = blogsThisMonth - blogsLastMonth;
             blogTrend.textContent = `${blogDiff >= 0 ? '↗' : '↘'} ${Math.abs(blogDiff)} from last month`;
         }
         
-        if (userData.stats.commentsLastMonth !== undefined && userData.stats.commentsThisMonth !== undefined) {
-            const commentDiff = userData.stats.commentsThisMonth - userData.stats.commentsLastMonth;
+        if (typeof commentsLastMonth !== 'undefined' && typeof commentsThisMonth !== 'undefined') {
+            const commentDiff = commentsThisMonth - commentsLastMonth;
             commentTrend.textContent = `${commentDiff >= 0 ? '↗' : '↘'} ${Math.abs(commentDiff)} from last month`;
         }
     }
@@ -322,21 +344,49 @@ function setupRealTimeListeners(profileUserId) {
             showAlert('Error fetching blog counts', 'error');
         });
 
-    // Enhanced Comments count listener with better error handling
-    const commentsUnsubscribe = db.collectionGroup('comments')
-        .where('userId', '==', profileUserId)
-        .onSnapshot(snapshot => {
-            const totalComments = snapshot.size;
-            if (commentCount) commentCount.textContent = totalComments;
+    // Get all blogs first to get their comment collections
+    const commentsUnsubscribe = db.collection('blogs')
+        .onSnapshot(async snapshot => {
+            try {
+                let totalComments = 0;
+                const commentPromises = snapshot.docs.map(blogDoc => 
+                    blogDoc.ref.collection('comments')
+                        .where('userId', '==', profileUserId)
+                        .get()
+                );
+                
+                const commentSnapshots = await Promise.all(commentPromises);
+                totalComments = commentSnapshots.reduce((total, commentSnap) => 
+                    total + commentSnap.size, 0
+                );
 
-            // Update comments tab badge if it exists
-            const commentsTab = document.querySelector('[data-tab="comments"]');
-            if (commentsTab && totalComments > 0) {
-                commentsTab.innerHTML = `Comments <span class="badge badge-sm">${totalComments}</span>`;
+                // Update comment count display
+                if (commentCount) {
+                    commentCount.textContent = totalComments;
+                }
+
+                // Update comments tab badge
+                const commentsTab = document.querySelector('[data-tab="comments"]');
+                if (commentsTab) {
+                    if (totalComments > 0) {
+                        commentsTab.innerHTML = `Comments <span class="badge badge-sm">${totalComments}</span>`;
+                    } else {
+                        commentsTab.textContent = 'Comments';
+                    }
+                }
+            } catch (error) {
+                console.error('Error counting comments:', error);
+                if (commentCount) commentCount.textContent = '0';
+                if (document.querySelector('[data-tab="comments"]')) {
+                    document.querySelector('[data-tab="comments"]').textContent = 'Comments';
+                }
             }
         }, error => {
             console.error('Error in comments listener:', error);
-            showAlert('Error fetching comment counts', 'error');
+            if (commentCount) commentCount.textContent = '0';
+            if (document.querySelector('[data-tab="comments"]')) {
+                document.querySelector('[data-tab="comments"]').textContent = 'Comments';
+            }
         });
 
     // User activity tracking
@@ -420,6 +470,58 @@ async function loadTabContent(tabName) {
     }
 }
 
+// Pagination constants
+const ITEMS_PER_PAGE = 6;
+let currentPage = {
+    blogs: 1,
+    drafts: 1,
+    comments: 1
+};
+let totalItems = {
+    blogs: 0,
+    drafts: 0,
+    comments: 0
+};
+
+// Create pagination controls
+function createPaginationControls(type, container) {
+    const totalPages = Math.ceil(totalItems[type] / ITEMS_PER_PAGE);
+    if (totalPages <= 1) return;
+
+    const paginationDiv = document.createElement('div');
+    paginationDiv.className = 'flex justify-center items-center gap-2 mt-6';
+    paginationDiv.innerHTML = `
+        <button class="btn btn-sm ${currentPage[type] === 1 ? 'btn-disabled' : ''}" 
+                onclick="changePage('${type}', ${currentPage[type] - 1})" 
+                ${currentPage[type] === 1 ? 'disabled' : ''}>
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span class="text-sm">Page ${currentPage[type]} of ${totalPages}</span>
+        <button class="btn btn-sm ${currentPage[type] === totalPages ? 'btn-disabled' : ''}" 
+                onclick="changePage('${type}', ${currentPage[type] + 1})" 
+                ${currentPage[type] === totalPages ? 'disabled' : ''}>
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+    container.appendChild(paginationDiv);
+}
+
+// Change page function
+async function changePage(type, newPage) {
+    currentPage[type] = newPage;
+    switch(type) {
+        case 'blogs':
+            await loadBlogs(userId || auth.currentUser?.uid, false);
+            break;
+        case 'drafts':
+            await loadBlogs(userId || auth.currentUser?.uid, true);
+            break;
+        case 'comments':
+            await loadComments(userId || auth.currentUser?.uid);
+            break;
+    }
+}
+
 // Load blogs with real-time updates
 async function loadBlogs(userId, isDrafts) {
     const container = document.getElementById(isDrafts ? 'draftsTab' : 'blogsTab');
@@ -428,11 +530,9 @@ async function loadBlogs(userId, isDrafts) {
     container.innerHTML = '<div class="loading loading-spinner loading-lg"></div>';
 
     try {
-        // Create query without composite index requirement
-        const query = db.collection('blogs')
-            .where('authorId', '==', userId);
+        const blogsRef = db.collection('blogs');
+        const query = blogsRef.where('authorId', '==', userId);
 
-        // Set up real-time listener with error handling
         const unsubscribe = query.onSnapshot(snapshot => {
             if (snapshot.empty) {
                 container.innerHTML = `
@@ -450,68 +550,58 @@ async function loadBlogs(userId, isDrafts) {
                 return;
             }
 
-            // Process and sort the documents in memory
-            const blogs = snapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(blog => blog.status === (isDrafts ? 'draft' : 'published'))
-                .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+            const blogs = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.status === (isDrafts ? 'draft' : 'published')) {
+                    blogs.push({
+                        id: doc.id,
+                        ...data
+                    });
+                }
+            });
+
+            blogs.sort((a, b) => {
+                const dateA = a.createdAt?.toMillis() || 0;
+                const dateB = b.createdAt?.toMillis() || 0;
+                return dateB - dateA;
+            });
+
+            const type = isDrafts ? 'drafts' : 'blogs';
+            totalItems[type] = blogs.length;
 
             if (blogs.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12">
-                        <div class="max-w-md mx-auto">
+            container.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="max-w-md mx-auto">
                             <i class="fas fa-file-alt text-6xl text-gray-300 mb-4"></i>
                             <h3 class="text-xl font-semibold mb-2">No ${isDrafts ? 'drafts' : 'blogs'} found</h3>
                             <p class="text-gray-500 mb-4">Start writing your first blog post!</p>
                             <a href="create-blog.html" class="btn btn-primary">
                                 <i class="fas fa-pen mr-2"></i>Create Blog
                             </a>
-                        </div>
                     </div>
-                `;
+                </div>
+            `;
                 return;
             }
+
+            const startIndex = (currentPage[type] - 1) * ITEMS_PER_PAGE;
+            const paginatedBlogs = blogs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
             container.innerHTML = '';
             const fragment = document.createDocumentFragment();
             
-            blogs.forEach(blog => {
+            paginatedBlogs.forEach(blog => {
                 const blogCard = createBlogCard(blog.id, blog, isDrafts);
                 fragment.appendChild(blogCard);
             });
             
             container.appendChild(fragment);
-        }, error => {
-            console.error('Error loading blogs:', error);
-            container.innerHTML = `
-                <div class="text-center py-12">
-                    <div class="max-w-md mx-auto">
-                        <i class="fas fa-exclamation-circle text-4xl text-error mb-4"></i>
-                        <h3 class="text-xl font-semibold mb-2">Error loading ${isDrafts ? 'drafts' : 'blogs'}</h3>
-                        <p class="text-gray-500 mb-4">${error.message}</p>
-                        <button onclick="loadBlogs('${userId}', ${isDrafts})" class="btn btn-primary">
-                            <i class="fas fa-sync-alt mr-2"></i>Try Again
-                        </button>
-                    </div>
-                </div>
-            `;
+            createPaginationControls(type, container);
         });
 
-        // Cleanup listener when tab changes
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    if (container.classList.contains('hidden')) {
-                        unsubscribe();
-                    }
-                }
-            });
-        });
-
-        observer.observe(container, { attributes: true });
-        
-        // Store unsubscribe function for cleanup
-        container.dataset.unsubscribe = unsubscribe;
+        container._unsubscribe = unsubscribe;
         
     } catch (error) {
         console.error('Error setting up blogs listener:', error);
@@ -573,13 +663,28 @@ async function loadComments(userId) {
     container.innerHTML = '<div class="loading loading-spinner loading-lg"></div>';
 
     try {
-        // Get all blogs first
-        const blogsSnapshot = await db.collection('blogs').get();
-        const commentListeners = [];
+        const blogsRef = db.collection('blogs');
+        
+        const unsubscribe = blogsRef.onSnapshot(async snapshot => {
+            try {
+                const commentPromises = snapshot.docs.map(blogDoc => 
+                    blogDoc.ref.collection('comments')
+                        .where('userId', '==', userId)
+                        .get()
+                        .then(commentSnap => {
+                            return commentSnap.docs.map(commentDoc => ({
+                                id: commentDoc.id,
+                                blogId: blogDoc.id,
+                                blogTitle: blogDoc.data().title,
+                                ...commentDoc.data()
+                            }));
+                        })
+                );
 
-        // Function to update comments display
-        const updateCommentsDisplay = (allComments) => {
-            if (allComments.length === 0) {
+                const commentsArrays = await Promise.all(commentPromises);
+                const comments = commentsArrays.flat();
+
+                if (comments.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-12">
                         <div class="max-w-md mx-auto">
@@ -592,73 +697,54 @@ async function loadComments(userId) {
                 return;
             }
 
+                comments.sort((a, b) => {
+                    const dateA = a.createdAt?.toMillis() || 0;
+                    const dateB = b.createdAt?.toMillis() || 0;
+                    return dateB - dateA;
+                });
+
+                totalItems.comments = comments.length;
+                const startIndex = (currentPage.comments - 1) * ITEMS_PER_PAGE;
+                const paginatedComments = comments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
             container.innerHTML = '';
             const fragment = document.createDocumentFragment();
             
-            allComments
-                .sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis())
-                .forEach(comment => {
+                paginatedComments.forEach(comment => {
                     const commentCard = createCommentCard(comment);
                     fragment.appendChild(commentCard);
                 });
             
             container.appendChild(fragment);
-        };
+                createPaginationControls('comments', container);
 
-        // Set up real-time listeners for comments in each blog
-        blogsSnapshot.docs.forEach(blogDoc => {
-            const unsubscribe = blogDoc.ref.collection('comments')
-                .where('userId', '==', userId)
-                .orderBy('createdAt', 'desc')
-                .onSnapshot(commentsSnapshot => {
-                    const comments = commentsSnapshot.docs.map(commentDoc => ({
-                        id: commentDoc.id,
-                        blogId: blogDoc.id,
-                        blogTitle: blogDoc.data().title,
-                        ...commentDoc.data()
-                    }));
-
-                    // Update the comments for this blog in the listeners array
-                    const listenerIndex = commentListeners.findIndex(l => l.blogId === blogDoc.id);
-                    if (listenerIndex !== -1) {
-                        commentListeners[listenerIndex].comments = comments;
-                    } else {
-                        commentListeners.push({ blogId: blogDoc.id, comments, unsubscribe });
-                    }
-
-                    // Get all comments from all listeners
-                    const allComments = commentListeners.flatMap(listener => listener.comments || []);
-                    updateCommentsDisplay(allComments);
-                }, error => {
-                    console.error('Error in comments listener:', error);
-                    showAlert(`Error loading comments: ${error.message}`, 'error');
-                });
+            } catch (error) {
+                console.error('Error processing comments:', error);
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="max-w-md mx-auto">
+                            <i class="fas fa-exclamation-circle text-4xl text-error mb-4"></i>
+                            <h3 class="text-xl font-semibold mb-2">Error loading comments</h3>
+                            <p class="text-gray-500 mb-4">Please try again</p>
+                            <button onclick="loadComments('${userId}')" class="btn btn-primary">
+                                <i class="fas fa-sync-alt mr-2"></i>Try Again
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
         });
 
-        // Cleanup listeners when tab changes
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    if (container.classList.contains('hidden')) {
-                        commentListeners.forEach(listener => listener.unsubscribe());
-                    }
-                }
-            });
-        });
-
-        observer.observe(container, { attributes: true });
-        
-        // Store listeners for cleanup
-        container.dataset.listeners = JSON.stringify(commentListeners.map(l => l.blogId));
+        container._unsubscribe = unsubscribe;
         
     } catch (error) {
-        console.error('Error setting up comments listeners:', error);
+        console.error('Error setting up comments listener:', error);
         container.innerHTML = `
             <div class="text-center py-12">
                 <div class="max-w-md mx-auto">
                     <i class="fas fa-exclamation-circle text-4xl text-error mb-4"></i>
                     <h3 class="text-xl font-semibold mb-2">Error loading comments</h3>
-                    <p class="text-gray-500 mb-4">${error.message}</p>
+                    <p class="text-gray-500 mb-4">Please try again</p>
                     <button onclick="loadComments('${userId}')" class="btn btn-primary">
                         <i class="fas fa-sync-alt mr-2"></i>Try Again
                     </button>
@@ -728,7 +814,7 @@ function createCommentCard(comment) {
     return div;
 }
 
-// Handle profile image upload
+// Handle profile image upload with optimized upload
 imageUpload.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -745,34 +831,105 @@ imageUpload.addEventListener('change', async (e) => {
     }
 
     try {
-        showLoading('Uploading image...');
+        showLoading('Optimizing and uploading image...');
 
-        // Create a reference to the storage location
+        // Create a reference to the storage location with timestamp to prevent caching
+        const timestamp = Date.now();
         const storageRef = firebase.storage().ref();
-        const fileRef = storageRef.child(`profile-images/${auth.currentUser.uid}/${file.name}`);
+        const fileRef = storageRef.child(`profile-images/${auth.currentUser.uid}/profile_${timestamp}`);
 
-        // Upload the file
-        const snapshot = await fileRef.put(file);
-        const photoURL = await snapshot.ref.getDownloadURL();
+        // Optimize image before upload
+        const optimizedBlob = await optimizeImage(file);
+        
+        // Upload the optimized file
+        const uploadTask = fileRef.put(optimizedBlob);
 
-        // Update user profile
-        await Promise.all([
-            auth.currentUser.updateProfile({ photoURL }),
-            db.collection('users').doc(auth.currentUser.uid).update({
-                photoURL,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            })
-        ]);
+        // Handle upload progress
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                loadingMessage.textContent = `Uploading: ${Math.round(progress)}%`;
+            },
+            (error) => {
+                console.error('Error uploading image:', error);
+                hideLoading();
+                showAlert('Error uploading image', 'error');
+            },
+            async () => {
+                try {
+                    const photoURL = await uploadTask.snapshot.ref.getDownloadURL();
 
-        showAlert('Profile image updated successfully!', 'success');
+                    // Update user profile and Firestore simultaneously
+                    await Promise.all([
+                        auth.currentUser.updateProfile({ photoURL }),
+                        db.collection('users').doc(auth.currentUser.uid).update({
+                            photoURL,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        })
+                    ]);
+
+                    // Update UI immediately
+                    profileImage.innerHTML = `<img src="${photoURL}" alt="Profile" class="w-full h-full object-cover rounded-full" />`;
+                    
+                    hideLoading();
+                    showAlert('Profile image updated successfully!', 'success');
+                } catch (error) {
+                    console.error('Error updating profile:', error);
+                    hideLoading();
+                    showAlert('Error updating profile image', 'error');
+                }
+            }
+        );
     } catch (error) {
-        console.error('Error uploading image:', error);
-        showAlert('Error uploading image', 'error');
-    } finally {
+        console.error('Error processing image:', error);
         hideLoading();
+        showAlert('Error processing image', 'error');
+    } finally {
         imageUpload.value = ''; // Reset file input
     }
 });
+
+// Optimize image upload
+async function optimizeImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Optimize dimensions
+                const MAX_SIZE = 800;
+                const aspectRatio = width / height;
+                
+                if (width > height && width > MAX_SIZE) {
+                    width = MAX_SIZE;
+                    height = width / aspectRatio;
+                } else if (height > MAX_SIZE) {
+                    height = MAX_SIZE;
+                    width = height * aspectRatio;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Use lower quality for larger images
+                const quality = file.size > 1024 * 1024 ? 0.7 : 0.8;
+                canvas.toBlob(resolve, 'image/jpeg', quality);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
 
 // Handle edit profile
 editProfileBtn.addEventListener('click', async () => {
@@ -785,8 +942,8 @@ editProfileBtn.addEventListener('click', async () => {
         document.getElementById('editWebsite').value = userData.website || '';
         document.getElementById('editLocation').value = userData.location || '';
         document.getElementById('editShowEmail').checked = userData.showEmail || false;
-        
-        editProfileModal.showModal();
+
+    editProfileModal.showModal();
     } catch (error) {
         console.error('Error loading user data:', error);
         showAlert('Error loading profile data', 'error');
@@ -801,48 +958,38 @@ editProfileForm.addEventListener('submit', async (e) => {
     submitButton.innerHTML = '<span class="loading loading-spinner"></span> Saving...';
     
     try {
-        const name = document.getElementById('editName').value.trim();
-        const bio = document.getElementById('editBio').value.trim();
-        let website = document.getElementById('editWebsite').value.trim();
-        const location = document.getElementById('editLocation').value.trim();
-        const showEmail = document.getElementById('editShowEmail').checked;
+        const formData = {
+            name: document.getElementById('editName').value.trim(),
+            bio: document.getElementById('editBio').value.trim(),
+            website: document.getElementById('editWebsite').value.trim(),
+            location: document.getElementById('editLocation').value.trim(),
+            showEmail: document.getElementById('editShowEmail').checked,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
 
         // Basic validation
-        if (!name) {
-            throw new Error('Display name is required');
-        }
-
-        if (bio.length > 160) {
-            throw new Error('Bio must be 160 characters or less');
-        }
+        if (!formData.name) throw new Error('Display name is required');
+        if (formData.bio.length > 160) throw new Error('Bio must be 160 characters or less');
 
         // Website validation and formatting
-        if (website) {
+        if (formData.website) {
             try {
-                // Add https:// if no protocol specified
-                if (!website.match(/^https?:\/\//i)) {
-                    website = 'https://' + website;
-                }
-                new URL(website); // Will throw if invalid URL
+                formData.website = formData.website.startsWith('http') ? formData.website : `https://${formData.website}`;
+                new URL(formData.website);
             } catch {
                 throw new Error('Please enter a valid website URL');
             }
         }
 
-        // Update user profile
-        await db.collection('users').doc(auth.currentUser.uid).update({
-            name,
-            bio,
-            website,
-            location,
-            showEmail,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        // Update both profile and auth in parallel
+        await Promise.all([
+            db.collection('users').doc(auth.currentUser.uid).update(formData),
+            auth.currentUser.updateProfile({ displayName: formData.name })
+        ]);
 
-        // Update display name in Firebase Auth
-        await auth.currentUser.updateProfile({
-            displayName: name
-        });
+        // Update UI immediately
+        const userData = { ...formData, email: auth.currentUser.email, photoURL: auth.currentUser.photoURL };
+        updateProfileUI(userData, true);
 
         showAlert('Profile updated successfully!', 'success');
         editProfileModal.close();
@@ -976,20 +1123,15 @@ window.addEventListener('beforeunload', () => {
     const blogTabs = ['blogsTab', 'draftsTab'];
     blogTabs.forEach(tabId => {
         const container = document.getElementById(tabId);
-        if (container && container.dataset.unsubscribe) {
-            const unsubscribe = new Function(container.dataset.unsubscribe);
-            unsubscribe();
+        if (container && container._unsubscribe) {
+            container._unsubscribe();
         }
     });
     
     // Cleanup comment listeners
     const commentsTab = document.getElementById('commentsTab');
-    if (commentsTab && commentsTab.dataset.listeners) {
-        const listeners = JSON.parse(commentsTab.dataset.listeners);
-        listeners.forEach(blogId => {
-            const unsubscribe = new Function(commentsTab.dataset[`unsubscribe_${blogId}`]);
-            unsubscribe();
-        });
+    if (commentsTab && commentsTab._unsubscribe) {
+        commentsTab._unsubscribe();
     }
 });
 
@@ -1024,7 +1166,7 @@ tabs.forEach(tab => {
         // Load tab content
         loadTabContent(tabName);
     });
-});
+}); 
 
 // Share profile functionality
 const shareProfileBtn = document.getElementById('shareProfileBtn');

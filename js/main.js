@@ -488,4 +488,48 @@ document.addEventListener('DOMContentLoaded', initMasonryLayout);
 
 // Initial load
 loadFeaturedBlogs();
-loadBlogs(); 
+loadBlogs();
+
+// Initialize theme
+function initializeTheme() {
+    // First try to get theme from localStorage
+    let theme = localStorage.getItem('theme');
+    
+    // If no theme in localStorage, try to get from user preferences in Firestore
+    if (!theme && auth.currentUser) {
+        db.collection('users').doc(auth.currentUser.uid).get()
+            .then(doc => {
+                if (doc.exists && doc.data().theme) {
+                    theme = doc.data().theme;
+                    localStorage.setItem('theme', theme);
+                    document.documentElement.setAttribute('data-theme', theme);
+                }
+            })
+            .catch(error => console.error('Error loading theme preference:', error));
+    }
+    
+    // If still no theme, use default
+    if (!theme) {
+        theme = 'light'; // Default theme
+        localStorage.setItem('theme', theme);
+    }
+    
+    // Apply theme
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+// Listen for theme changes from other tabs
+const themeBC = new BroadcastChannel('theme_change');
+themeBC.onmessage = (event) => {
+    const { theme } = event.data;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+};
+
+// Initialize theme on page load
+document.addEventListener('DOMContentLoaded', initializeTheme);
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    themeBC.close();
+}); 
